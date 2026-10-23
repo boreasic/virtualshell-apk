@@ -1,0 +1,72 @@
+name: Snapshot
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"   # Mondays 03:00 UTC
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Snapshot even if nothing changed"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The published site lives on the `pages` branch, served by GitHub
+      # Pages. Git stores identical package files once, so reusing them
+      # across snapshots costs no repository space.
+      - name: Check out the pages branch
+        run: |
+          if git ls-remote --exit-code --heads origin pages >/dev/null; then
+            git clone --quiet --single-branch --branch pages \
+              "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" site
+          else
+            mkdir site && git -C site init --quiet -b pages
+            git -C site remote add origin \
+              "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          fi
+
+      - name: Write the signing key
+        env:
+          APK_SIGNING_KEY: ${{ secrets.APK_SIGNING_KEY }}
+        run: |
+          test -n "$APK_SIGNING_KEY" || { echo "APK_SIGNING_KEY secret is not set" >&2; exit 1; }
+          umask 077
+          printf '%s\n' "$APK_SIGNING_KEY" > "$RUNNER_TEMP/signing.rsa"
+
+      - name: Build the snapshot
+        id: build
+        run: |
+          python3 snapshot.py \
+            --release v3.21 --arch aarch64 --seeds seeds/v3.21.txt \
+            --site site --key-file "$RUNNER_TEMP/signing.rsa" \
+            --key-name "${{ vars.APK_KEY_NAME }}" \
+            ${{ inputs.force && '--force' || '' }}
+          mkdir -p site/keys
+          cp keys/*.rsa.pub site/keys/
+          touch site/.nojekyll
+
+      - name: Publish
+        if: steps.build.outputs.snapshot != ''
+        run: |
+          cd site
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit --quiet -m "Snapshot ${{ steps.build.outputs.snapshot }}"
+          git push --quiet origin pages
+
+      - name: Remove the signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/signing.rsa"

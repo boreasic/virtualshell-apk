@@ -1,0 +1,46 @@
+# Seed packages for the Alpine v3.21 snapshot. One package per line; their
+# dependencies are added automatically. Lines starting with # are comments.
+
+# Tier 1: core shell, archives and network tools
+bash
+zsh
+coreutils
+findutils
+grep
+sed
+gawk
+less
+file
+tree
+curl
+wget
+ca-certificates
+openssh-client
+tar
+gzip
+xz
+zstd
+unzip
+zip
+jq
+tmux
+htop
+nano
+vim
+
+# Tier 2: git and scripting
+git
+git-lfs
+python3
+py3-pip
+perl
+
+# Tier 3: Node.js and coding agents (Claude Code's native binary needs
+# libgcc, libstdc++ and ripgrep)
+nodejs
+npm
+ripgrep
+fd
+fzf
+libgcc
+libstdc++
