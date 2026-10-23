@@ -8,19 +8,31 @@
 #
 #   sh rootfs/build.sh SNAPSHOT_DATE OUTPUT.tar.gz
 #
-# Writes OUTPUT.tar.gz and OUTPUT.tar.gz.sha256.
+# Writes the archive, its SHA-256, and OUTPUT.tar.gz.manifest.json.
 set -eu
 
+if [ "$#" -ne 2 ]; then
+    echo "usage: $0 SNAPSHOT_DATE OUTPUT.tar.gz" >&2
+    exit 1
+fi
 snapshot=$1
 output=$2
+case "$snapshot" in
+    ????-??-??) ;;
+    *) echo "snapshot must be an explicit YYYY-MM-DD date" >&2; exit 1 ;;
+esac
+case "$snapshot" in
+    *[!0-9-]*) echo "invalid snapshot date" >&2; exit 1 ;;
+esac
+[ "$(uname -m)" = aarch64 ] || { echo "build requires aarch64 Alpine" >&2; exit 1; }
 here=$(cd "$(dirname "$0")" && pwd)
 release=v3.21
 minirootfs_version=3.21.0
+minirootfs_sha256=f31202c4070c4ef7de9e157e1bd01cb4da3a2150035d74ea5372c5e86f1efac1
 site=https://boreasic.github.io/virtualshell-apk
-packages="bash"
 
-# GNU tar sorts entries for a reproducible archive.
-apk add --no-cache tar >/dev/null
+# These tools belong to the builder, not the guest filesystem.
+apk add --no-cache tar jq >/dev/null
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -28,6 +40,7 @@ rootfs=$work/rootfs
 mkdir -p "$rootfs"
 wget -qO "$work/minirootfs.tar.gz" \
     "https://dl-cdn.alpinelinux.org/alpine/$release/releases/aarch64/alpine-minirootfs-$minirootfs_version-aarch64.tar.gz"
+(cd "$work" && echo "$minirootfs_sha256  minirootfs.tar.gz" | sha256sum -c -)
 tar -xzf "$work/minirootfs.tar.gz" -C "$rootfs"
 
 # The pinned snapshot first, Alpine's mirror only for explicit @alpine.
@@ -38,8 +51,17 @@ $site/$release/$snapshot/community
 @alpine https://dl-cdn.alpinelinux.org/alpine/$release/main
 @alpine https://dl-cdn.alpinelinux.org/alpine/$release/community
 EOF
-apk --root "$rootfs" --keys-dir "$rootfs/etc/apk/keys" \
-    --repositories-file "$rootfs/etc/apk/repositories" --no-cache add $packages >/dev/null
+# Both operations target the guest: update its indexes, then install bash
+# and its dependencies with apk so its package database stays consistent.
+guest_apk() {
+    apk --root "$rootfs" --keys-dir "$rootfs/etc/apk/keys" \
+        --repositories-file "$rootfs/etc/apk/repositories" "$@"
+}
+guest_apk update
+guest_apk add bash
+guest_apk info -v > "$work/packages.txt"
+rm -f "$rootfs"/var/cache/apk/*
+chroot "$rootfs" /bin/bash -c 'test -n "$BASH_VERSION"'
 
 # root logs in to bash; /bin/sh stays BusyBox ash.
 sed -i 's#^root:\(.*\):/bin/sh$#root:\1:/bin/bash#' "$rootfs/etc/passwd"
@@ -55,6 +77,18 @@ done
 echo "$snapshot" > "$rootfs/etc/virtualshell-rootfs"
 
 mkdir -p "$(dirname "$output")"
-tar --sort=name --numeric-owner -C "$rootfs" -cf - . | gzip -9n > "$output"
+# Use a temporary tar so an archiver failure cannot be hidden by a pipe.
+tar --sort=name --numeric-owner --owner=0 --group=0 \
+    --mtime="@${SOURCE_DATE_EPOCH:-0}" -C "$rootfs" -cf "$work/rootfs.tar" .
+gzip -9n < "$work/rootfs.tar" > "$output"
 (cd "$(dirname "$output")" && sha256sum "$(basename "$output")") > "$output.sha256"
+LC_ALL=C sort "$work/packages.txt" > "$work/packages-sorted.txt"
+jq -Rn --arg snapshot "$snapshot" --arg release "$release" \
+    --arg base "$minirootfs_version" --arg base_sha256 "$minirootfs_sha256" \
+    --arg revision "${SOURCE_REVISION:-unknown}" \
+    --arg sha256 "$(cut -d ' ' -f 1 "$output.sha256")" \
+    '{architecture: "aarch64", alpine_release: $release, snapshot: $snapshot,
+      minirootfs_version: $base, minirootfs_sha256: $base_sha256,
+      source_revision: $revision, sha256: $sha256, packages: [inputs]}' \
+    < "$work/packages-sorted.txt" > "$output.manifest.json"
 echo "built $output ($(wc -c < "$output") bytes)"

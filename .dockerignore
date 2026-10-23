@@ -1,0 +1,9 @@
+# Allow only build inputs; never send private signing keys to Docker.
+**
+!Dockerfile
+!rootfs/
+!rootfs/**
+!keys/
+!keys/*.rsa.pub
+**/._*
+**/.DS_Store

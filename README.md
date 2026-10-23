@@ -51,22 +51,52 @@ version from any repository and the pinning would be lost.
 
 ## Default root filesystem
 
-`rootfs/build.sh` builds the root filesystem the app installs on first
-launch: Alpine's minirootfs plus `bash` (root's login shell; `/bin/sh` stays
+The rootfs builder lives here alongside the package snapshots and public
+keys it consumes. The [Dockerfile](Dockerfile) builds an ARM64 default
+filesystem: Alpine's checksum-pinned minirootfs plus `bash` (root's login shell; `/bin/sh` stays
 BusyBox), installed with apk from a pinned snapshot, and the files in
 `rootfs/overlay/` (`clc`, `/etc/profile.d` and `/etc/bash` defaults, bash
-startup files). After each snapshot the [Rootfs workflow](.github/workflows/rootfs.yml)
-builds it for the newest snapshot in an Alpine container on an arm64 runner
+startup files). `rootfs/build.sh` runs `apk update` and `apk add bash`
+against the guest filesystem and verifies that Bash can execute. Builder
+tools and package caches are excluded from the archive.
+
+After each snapshot the [Rootfs workflow](.github/workflows/rootfs.yml)
+builds it for the newest snapshot with Docker on an arm64 runner
 and publishes:
 
 ```
 rootfs/v3.21/<date>/virtualshell-rootfs-aarch64.tar.gz
 rootfs/v3.21/<date>/virtualshell-rootfs-aarch64.tar.gz.sha256
+rootfs/v3.21/<date>/virtualshell-rootfs-aarch64.tar.gz.manifest.json
 ```
 
-The app pins one image by URL and SHA-256 (`app/GuestARM64.xcconfig`).
-Images whose snapshot was pruned are removed. The script runs in any
-aarch64 Alpine system, including a Virtual Shell guest:
+Build locally with Docker (ARM64 execution or emulation is required):
+
+```sh
+docker buildx build --platform linux/arm64 \
+  --build-arg SNAPSHOT=2026-10-23 \
+  --build-arg SOURCE_REVISION="$(git rev-parse HEAD)" \
+  --build-arg SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" \
+  --output type=local,dest=out .
+(cd out && shasum -a 256 -c virtualshell-rootfs-aarch64.tar.gz.sha256)
+```
+
+Choose a date listed in `v3.21/snapshots.txt` on the published site.
+The final Docker stage exports only the three release files; it is not a
+runnable container. The tarball has filesystem paths at its root, ready
+for the app's importer. The manifest records all installed package
+versions, the snapshot, base checksum, archive checksum, and source commit.
+Archive ownership and timestamps are normalized; full byte-for-byte
+reproducibility also depends on package scripts and the builder image.
+The Docker context includes only the rootfs sources and public keys.
+
+The app should pin the published image URL and verify its SHA-256 before
+bundling it; switching the app from Alpine's stock image is a separate
+integration step. Images whose snapshot was pruned are removed, so retain
+snapshots needed by supported app releases before relying on these URLs
+long-term.
+
+For a direct build, the script also runs as root in an aarch64 Alpine system:
 `sh rootfs/build.sh <snapshot-date> out/rootfs.tar.gz`.
 
 ## Setup
