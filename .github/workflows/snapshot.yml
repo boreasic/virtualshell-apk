@@ -2,7 +2,7 @@ name: Snapshot
 
 on:
   schedule:
-    - cron: "0 3 * * 1"   # Mondays 03:00 UTC
+    - cron: "0 3 1 * *"   # 1st of each month, 03:00 UTC
   workflow_dispatch:
     inputs:
       force:
@@ -50,7 +50,7 @@ jobs:
         run: |
           python3 snapshot.py \
             --release v3.21 --arch aarch64 --seeds seeds/v3.21.txt \
-            --site site --key-file "$RUNNER_TEMP/signing.rsa" \
+            --site site --keep 10 --key-file "$RUNNER_TEMP/signing.rsa" \
             --key-name "${{ vars.APK_KEY_NAME }}" \
             ${{ inputs.force && '--force' || '' }}
           mkdir -p site/keys

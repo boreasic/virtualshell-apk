@@ -7,7 +7,8 @@ Alpine replaces them upstream.
 
 ## How it works
 
-`seeds/v3.21.txt` lists the packages users need. Every week, the
+`seeds/v3.21.txt` lists the packages users need. Every month (or when run
+by hand), the
 [Snapshot workflow](.github/workflows/snapshot.yml) runs `snapshot.py`:
 
 1. It downloads Alpine v3.21's `main` and `community` indexes and resolves
@@ -16,7 +17,7 @@ Alpine replaces them upstream.
 3. Otherwise it writes a new dated snapshot with a copy of every package
    (files already present in an earlier snapshot are reused) and an index
    holding the upstream entries for those packages, signed with our key.
-4. It keeps the newest four snapshots and publishes the site to the
+4. It keeps the newest ten snapshots and publishes the site to the
    `pages` branch, which GitHub Pages serves.
 
 Packages keep Alpine's own signatures; only the index is signed by us, so
@@ -80,11 +81,12 @@ apk reports the indexes as `UNTRUSTED signature` and ignores them.
 ## Limits
 
 - GitHub Pages serves up to about 1 GB per site. One snapshot of the
-  current seeds is about 80 MB, and four are kept (`--keep`).
-- Releases pinned to a pruned snapshot can no longer install packages, so
-  release builds should pin a recent snapshot. Raise `--keep` or move the
-  site to object storage (for example Cloudflare R2) if that window is too
-  short.
+  current seeds is about 80 MB, and ten are kept (`--keep 10`).
+- An app release pinned to a pruned snapshot can no longer install
+  packages. Monthly snapshots with ten kept give each release about ten
+  months. Run the workflow by hand when preparing a release instead of
+  waiting for the schedule, and move the site to object storage (for
+  example Cloudflare R2) when more seeds or a longer window are needed.
 - Pruned files stay in the `pages` branch history. Squash that branch from
   time to time if the repository grows too large.
 - Files over 95 MB are rejected because Git hosts refuse files over 100 MB.
