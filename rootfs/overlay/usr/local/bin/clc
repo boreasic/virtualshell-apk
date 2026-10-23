@@ -1,0 +1,5 @@
+#!/bin/sh
+# Installed by Virtual Shell: clear the screen, scrollback and images.
+printf '\033_Ga=d,d=A\033\\'
+clear
+printf '\033[3J'
