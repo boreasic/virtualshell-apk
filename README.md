@@ -61,13 +61,13 @@ against the guest filesystem and verifies that Bash can execute. Builder
 tools and package caches are excluded from the archive.
 
 After each snapshot the [Rootfs workflow](.github/workflows/rootfs.yml)
-builds it for the newest snapshot with Docker on an arm64 runner
-and publishes:
+builds it for the newest snapshot with Docker on an arm64 runner and creates
+an immutable GitHub Release tagged `rootfs-v3.21-<date>`. Each release has:
 
 ```
-rootfs/v3.21/<date>/virtualshell-rootfs-aarch64.tar.gz
-rootfs/v3.21/<date>/virtualshell-rootfs-aarch64.tar.gz.sha256
-rootfs/v3.21/<date>/virtualshell-rootfs-aarch64.tar.gz.manifest.json
+virtualshell-rootfs-aarch64.tar.gz
+virtualshell-rootfs-aarch64.tar.gz.sha256
+virtualshell-rootfs-aarch64.tar.gz.manifest.json
 ```
 
 Build locally with Docker (ARM64 execution or emulation is required):
@@ -90,11 +90,10 @@ Archive ownership and timestamps are normalized; full byte-for-byte
 reproducibility also depends on package scripts and the builder image.
 The Docker context includes only the rootfs sources and public keys.
 
-The app should pin the published image URL and verify its SHA-256 before
-bundling it; switching the app from Alpine's stock image is a separate
-integration step. Images whose snapshot was pruned are removed, so retain
-snapshots needed by supported app releases before relying on these URLs
-long-term.
+The app should pin a release-asset URL and verify its SHA-256 before bundling
+it; switching the app from Alpine's stock image is a separate integration
+step. Retain the APK snapshots used by supported app releases so `apk add`
+continues to resolve the package set the rootfs was tested with.
 
 For a direct build, the script also runs as root in an aarch64 Alpine system:
 `sh rootfs/build.sh <snapshot-date> out/rootfs.tar.gz`.
