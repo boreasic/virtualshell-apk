@@ -53,6 +53,7 @@ def parse_index(text):
             "size": int(fields["S"][0]),
             "depends": fields.get("D", [""])[0].split(),
             "provides": fields.get("p", [""])[0].split(),
+            "install_if": fields.get("i", [""])[0].split(),
             "priority": int(fields.get("k", ["0"])[0]),
             "raw": block.strip("\n"),
         }
@@ -93,23 +94,36 @@ def provider_map(upstream):
 
 
 def resolve(seeds, upstream):
+    """The seeds and their dependencies, plus every package whose install_if
+    the selection satisfies (and its dependencies). apk installs those
+    automatically, from any configured repository: left out, apk picks
+    them from the tagged Alpine mirror, where they are masked, and the
+    whole install fails (python3 needs python3-pyc that way)."""
     providers = provider_map(upstream)
     selected = {}
     missing = []
     stack = list(seeds)
-    while stack:
-        token = stack.pop()
-        if token.startswith("!"):
-            continue
-        entry = providers.get(strip_constraint(token))
-        if entry is None:
-            missing.append(token)
-            continue
-        if entry["name"] in selected:
-            continue
-        selected[entry["name"]] = entry
-        stack.extend(entry["depends"])
-    return selected, missing
+    while True:
+        while stack:
+            token = stack.pop()
+            if token.startswith("!"):
+                continue
+            entry = providers.get(strip_constraint(token))
+            if entry is None:
+                missing.append(token)
+                continue
+            if entry["name"] in selected:
+                continue
+            selected[entry["name"]] = entry
+            stack.extend(entry["depends"])
+        names = set(selected)
+        for entry in selected.values():
+            names.update(strip_constraint(p) for p in entry["provides"])
+        stack = [e["name"] for e in upstream.values()
+                 if e["install_if"] and e["name"] not in selected
+                 and all(strip_constraint(t) in names for t in e["install_if"])]
+        if not stack:
+            return selected, missing
 
 
 def read_seeds(path):
