@@ -3,6 +3,7 @@
 
 # Tier 1: core shell, archives and network tools
 bash
+bash-completion
 zsh
 coreutils
 findutils

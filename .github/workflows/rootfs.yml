@@ -1,0 +1,81 @@
+name: Rootfs
+
+# Builds Virtual Shell's default root filesystem (rootfs/build.sh) for the
+# newest snapshot and publishes it next to the snapshots:
+#   rootfs/v3.21/<date>/virtualshell-rootfs-aarch64.tar.gz (+ .sha256)
+# The app pins one image by URL and SHA-256 (app/GuestARM64.xcconfig).
+
+on:
+  workflow_run:
+    workflows: [Snapshot]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      snapshot:
+        description: "Snapshot date to build for (default: the newest)"
+        type: string
+        default: ""
+      force:
+        description: "Rebuild even if that snapshot already has an image"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+# Shares the Snapshot workflow's group, so the two never push the pages
+# branch at the same time.
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+
+jobs:
+  rootfs:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check out the pages branch
+        run: |
+          git clone --quiet --depth 1 --single-branch --branch pages \
+            "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" site
+
+      - name: Choose the snapshot
+        id: pick
+        run: |
+          snapshot="${{ inputs.snapshot }}"
+          [ -n "$snapshot" ] || snapshot=$(tail -n 1 site/v3.21/snapshots.txt)
+          test -d "site/v3.21/$snapshot" || { echo "no snapshot $snapshot" >&2; exit 1; }
+          dir="site/rootfs/v3.21/$snapshot"
+          if [ -f "$dir/virtualshell-rootfs-aarch64.tar.gz" ] && [ "${{ inputs.force }}" != "true" ]; then
+            echo "image for $snapshot already published"
+          else
+            echo "build=1" >> "$GITHUB_OUTPUT"
+          fi
+          echo "snapshot=$snapshot" >> "$GITHUB_OUTPUT"
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        if: steps.pick.outputs.build == '1'
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work alpine:3.21 \
+            sh rootfs/build.sh "${{ steps.pick.outputs.snapshot }}" out/virtualshell-rootfs-aarch64.tar.gz
+
+      - name: Publish
+        if: steps.pick.outputs.build == '1'
+        run: |
+          mkdir -p "${{ steps.pick.outputs.dir }}"
+          cp out/virtualshell-rootfs-aarch64.tar.gz out/virtualshell-rootfs-aarch64.tar.gz.sha256 "${{ steps.pick.outputs.dir }}/"
+          # Images follow their snapshots out when those are pruned.
+          for d in site/rootfs/v3.21/*/; do
+            date=$(basename "$d")
+            grep -qx "$date" site/v3.21/snapshots.txt || rm -rf "$d"
+          done
+          cd site
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit --quiet -m "Rootfs ${{ steps.pick.outputs.snapshot }}"
+          git push --quiet origin pages
+          cat "../out/virtualshell-rootfs-aarch64.tar.gz.sha256"

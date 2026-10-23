@@ -49,6 +49,26 @@ snapshot stay available from Alpine as an explicit choice:
 `apk add postgresql@alpine`. Without the tag, apk would pick the newest
 version from any repository and the pinning would be lost.
 
+## Default root filesystem
+
+`rootfs/build.sh` builds the root filesystem the app installs on first
+launch: Alpine's minirootfs plus `bash` (root's login shell; `/bin/sh` stays
+BusyBox), installed with apk from a pinned snapshot, and the files in
+`rootfs/overlay/` (`clc`, `/etc/profile.d` and `/etc/bash` defaults, bash
+startup files). After each snapshot the [Rootfs workflow](.github/workflows/rootfs.yml)
+builds it for the newest snapshot in an Alpine container on an arm64 runner
+and publishes:
+
+```
+rootfs/v3.21/<date>/virtualshell-rootfs-aarch64.tar.gz
+rootfs/v3.21/<date>/virtualshell-rootfs-aarch64.tar.gz.sha256
+```
+
+The app pins one image by URL and SHA-256 (`app/GuestARM64.xcconfig`).
+Images whose snapshot was pruned are removed. The script runs in any
+aarch64 Alpine system, including a Virtual Shell guest:
+`sh rootfs/build.sh <snapshot-date> out/rootfs.tar.gz`.
+
 ## Setup
 
 1. Create a **public** GitHub repository named `virtualshell-apk` and push
