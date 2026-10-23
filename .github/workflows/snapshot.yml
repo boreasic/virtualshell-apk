@@ -21,7 +21,7 @@ jobs:
   snapshot:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # The published site lives on the `pages` branch, served by GitHub
       # Pages. Git stores identical package files once, so reusing them
