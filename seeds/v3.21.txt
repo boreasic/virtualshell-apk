@@ -28,6 +28,7 @@ tmux
 htop
 nano
 vim
+neovim
 
 # Tier 2: git and scripting
 git
