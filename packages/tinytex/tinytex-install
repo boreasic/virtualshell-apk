@@ -1,0 +1,79 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Downloads remain upstream; the small APK contains only this installer.
+set -eu
+version=2026.10
+root=/opt/tinytex
+manifest=/usr/share/tinytex/downloads.txt
+
+repair() {
+	# DT_RPATH also applies to transitive dependencies (fontconfig/freetype).
+	# Never patch the private loader or libc themselves.
+	for binary in "$root"/bin/aarch64-linux/*; do
+		[ ! -L "$binary" ] || continue
+		interpreter=$(patchelf --print-interpreter "$binary" 2>/dev/null) || continue
+		[ "$interpreter" != "$root/runtime/lib/ld-linux-aarch64.so.1" ] || continue
+		patchelf --set-interpreter "$root/runtime/lib/ld-linux-aarch64.so.1" \
+			--force-rpath --set-rpath "$root/runtime/lib" "$binary"
+	done
+}
+
+if [ "${1:-}" = --repair ]; then
+	repair
+	exit 0
+fi
+[ "$#" -eq 0 ] || { echo 'Usage: tinytex-install [--repair]' >&2; exit 2; }
+[ "$(id -u)" = 0 ] || { echo 'Run tinytex-install as root.' >&2; exit 1; }
+[ "$(uname -m)" = aarch64 ] || { echo 'TinyTeX requires aarch64.' >&2; exit 1; }
+if [ -f "$root/.virtualshell-version" ]; then
+	if [ "$(cat "$root/.virtualshell-version")" = "$version" ]; then
+		repair
+		exit 0
+	fi
+	echo 'An older TinyTeX exists. Move /opt/tinytex aside before installing a new release.' >&2
+	exit 1
+fi
+[ ! -e "$root" ] || { echo 'Refusing to overwrite an existing /opt/tinytex.' >&2; exit 1; }
+mkdir -p /opt
+stage=$(mktemp -d /opt/.tinytex-install.XXXXXX)
+committed=false
+cleanup() {
+	if [ "$committed" = false ] && [ -f "$root/.virtualshell-installing" ]; then
+		rm -rf "$root"
+	fi
+	rm -rf "$stage"
+}
+trap cleanup EXIT
+trap 'exit 1' HUP INT TERM
+mkdir "$stage/downloads" "$stage/runtime"
+while read -r checksum name url; do
+	case "$checksum" in ''|'#'*) continue ;; esac
+	echo "Downloading $name..."
+	curl --fail --location --retry 3 --connect-timeout 30 --max-time 900 \
+		"$url" -o "$stage/downloads/$name"
+	printf '%s  %s\n' "$checksum" "$stage/downloads/$name" | sha256sum -c -
+	case "$name" in
+		*.deb)
+			member=$(ar t "$stage/downloads/$name" | sed -n '/^data\.tar\./p')
+			[ -n "$member" ]
+			ar p "$stage/downloads/$name" "$member" > "$stage/data.tar"
+			tar -xf "$stage/data.tar" -C "$stage/runtime"
+			;;
+		*.tar.xz) tar -xJf "$stage/downloads/$name" -C "$stage" ;;
+		*) echo "Unknown archive: $name" >&2; exit 1 ;;
+	esac
+done < "$manifest"
+mkdir -p "$stage/.TinyTeX/runtime/lib" "$stage/.TinyTeX/runtime/licenses"
+cp -a "$stage/runtime/lib/aarch64-linux-gnu/"* "$stage/.TinyTeX/runtime/lib/"
+cp -a "$stage/runtime/usr/lib/aarch64-linux-gnu/"* "$stage/.TinyTeX/runtime/lib/"
+cp -a "$stage/runtime/usr/share/doc/"* "$stage/.TinyTeX/runtime/licenses/"
+touch "$stage/.TinyTeX/.virtualshell-installing"
+mv "$stage/.TinyTeX" "$root"
+repair
+"$root/bin/aarch64-linux/pdflatex" --version >/dev/null
+"$root/bin/aarch64-linux/xelatex" --version >/dev/null
+"$root/bin/aarch64-linux/lualatex" --version >/dev/null
+printf '%s\n' "$version" > "$root/.virtualshell-version"
+rm "$root/.virtualshell-installing"
+committed=true
+echo 'TinyTeX is ready: pdflatex, xelatex, lualatex, latexmk and tlmgr.'

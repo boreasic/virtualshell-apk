@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   snapshot:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v5
 
@@ -45,12 +45,23 @@ jobs:
           umask 077
           printf '%s\n' "$APK_SIGNING_KEY" > "$RUNNER_TEMP/signing.rsa"
 
+      - name: Test snapshot resolver
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Build custom packages
+        run: |
+          tools/build-custom.sh "$RUNNER_TEMP/signing.rsa" "${{ vars.APK_KEY_NAME }}" custom
+
+      - name: Test TinyTeX installation
+        run: |
+          tools/test-tinytex.sh custom/aarch64 keys/"${{ vars.APK_KEY_NAME }}".rsa.pub
+
       - name: Build the snapshot
         id: build
         run: |
           python3 snapshot.py \
             --release v3.21 --arch aarch64 --seeds seeds/v3.21.txt \
-            --site site --keep 10 --key-file "$RUNNER_TEMP/signing.rsa" \
+            --site site --keep 10 --local-repo custom/aarch64 --key-file "$RUNNER_TEMP/signing.rsa" \
             --key-name "${{ vars.APK_KEY_NAME }}" \
             ${{ inputs.force && '--force' || '' }}
           mkdir -p site/keys

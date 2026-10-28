@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+command=${0##*/}
+bin=/opt/tinytex/bin/aarch64-linux
+if [ ! -f /opt/tinytex/.virtualshell-version ]; then
+	echo 'TinyTeX is not installed. Run tinytex-install to retry the download.' >&2
+	exit 1
+fi
+if [ "$command" = tlmgr ]; then
+	# tlmgr can replace ELF executables, including during a failed update.
+	# Restore their private interpreter before and after every invocation.
+	tinytex-install --repair
+	status=0
+	"$bin/tlmgr" "$@" || status=$?
+	tinytex-install --repair
+	exit "$status"
+fi
+exec "$bin/$command" "$@"

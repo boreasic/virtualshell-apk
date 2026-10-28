@@ -20,8 +20,8 @@ by hand), the
 4. It keeps the newest ten snapshots and publishes the site to the
    `pages` branch, which GitHub Pages serves.
 
-Packages keep Alpine's own signatures; only the index is signed by us, so
-clients need our public key.
+Mirrored packages keep Alpine's own signatures. Custom packages and all
+snapshot indexes are signed with our key, so clients need our public key.
 
 Site layout:
 
@@ -118,8 +118,9 @@ For a direct build, the script also runs as root in an aarch64 Alpine system:
 
 ```sh
 tools/make-key.sh test-key
+tools/build-custom.sh test-key.rsa test-key out/custom
 python3 snapshot.py --seeds seeds/v3.21.txt --site site \
-  --key-file test-key.rsa --key-name test-key
+  --key-file test-key.rsa --key-name test-key --local-repo out/custom/aarch64
 ```
 
 Then point a test root's `/etc/apk/repositories` at
@@ -141,3 +142,66 @@ apk reports the indexes as `UNTRUSTED signature` and ignores them.
 - Files over 95 MB are rejected because Git hosts refuse files over 100 MB.
 - Mirrored packages keep their own licenses. The site serves Alpine's
   unmodified packages; their sources are in Alpine's aports repository.
+
+## TinyTeX
+
+New snapshots include a signed `tinytex` installer package:
+
+```sh
+apk update
+apk add tinytex
+pdflatex document.tex
+# Also available: xelatex, lualatex, latexmk, bibtex, and tlmgr.
+tlmgr install <latex-package>
+```
+
+An existing VirtualShell installation remains pinned to its original snapshot.
+To use newly added packages, change **both** VirtualShell snapshot URLs in
+`/etc/apk/repositories` to a new date listed in
+<https://boreasic.github.io/virtualshell-apk/v3.21/snapshots.txt>, then run
+`apk update`. Keep the `@alpine` repository tags and the installed signing key.
+Old snapshots are not retroactively modified.
+
+The small APK downloads TinyTeX-1 **2026.10** (about 54 MB) and about 4 MB of
+private runtime archives from upstream during installation. Allow roughly
+500 MB free for download, extraction and the installed tree. All downloads
+are pinned and verified with SHA-256 before extraction. An interrupted or
+failed installation can be retried with `tinytex-install`; it will not replace
+an existing unmanaged `/opt/tinytex` or overwrite an older installation.
+
+TinyTeX upstream does not provide an aarch64-musl build. Its ARM64 glibc
+binaries are therefore paired with a private Debian Bookworm runtime under
+`/opt/tinytex/runtime`, including fontconfig dependencies. Only TinyTeX ELF
+executables are patched to use that loader and library directory. Alpine's
+system libraries and loader are unchanged. `gcompat` alone fails the LuaTeX
+and XeTeX compilation tests and is deliberately not used.
+
+`tlmgr` runs through a wrapper that repairs the private ELF interpreter and
+library paths before and after updates. Use the packaged `/usr/bin/tlmgr`,
+not the underlying script's absolute path. TeX Live upgrades across annual
+releases require a fresh TinyTeX installation. The package owns command
+wrappers; the downloaded tree is managed by TinyTeX, not APK. `apk del tinytex`
+removes the wrappers but retains `/opt/tinytex`, including packages installed
+with `tlmgr`. Remove that directory separately if you want to delete the
+installation. Reinstalling the same version reuses it without downloading.
+
+The wrapper APK is MIT licensed. Downloaded TinyTeX/TeX Live components keep
+their upstream licenses; Debian copyright notices are retained under
+`/opt/tinytex/runtime/licenses`. No upstream binaries are vendored in this
+repository. The exact runtime URLs and checksums live in
+`packages/tinytex/downloads.txt`; maintain these pins as upstream packages
+receive security updates or are retired from mirrors.
+
+The Snapshot workflow builds custom APKs using Alpine `abuild` on ARM64 and
+tests the signed TinyTeX APK in a clean Alpine 3.21 container before publishing.
+Tests compile PDFs with all three engines and latexmk, exercise runtime repair,
+verify reinstall preserves data, and reject a corrupted download. Run locally:
+
+```sh
+python3 -m unittest discover -s tests -v
+tools/test-tinytex.sh out/custom/aarch64 test-key.rsa.pub
+```
+
+This validates native ARM64 Linux execution. VirtualShell's emulated Linux
+runtime still needs a separate on-device check; native container success does
+not establish emulator compatibility.

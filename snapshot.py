@@ -73,6 +73,26 @@ def load_upstream(mirror, release, arch):
     return upstream
 
 
+def load_local(directory, arch, upstream):
+    """Merge APKs built and signed by our custom-package builder."""
+    directory = os.path.abspath(directory)
+    with tarfile.open(os.path.join(directory, "APKINDEX.tar.gz"), "r:gz") as archive:
+        entries = parse_index(archive.extractfile("APKINDEX").read().decode())
+    for name, entry in entries.items():
+        if name in upstream:
+            raise ValueError(f"custom package shadows Alpine package: {name}")
+        if f"A:{arch}" not in entry["raw"].splitlines():
+            raise ValueError(f"custom package {name} has the wrong architecture")
+        filename = f"{name}-{entry['version']}.apk"
+        if os.path.basename(filename) != filename:
+            raise ValueError(f"invalid custom package filename: {filename}")
+        entry["repo"] = "community"
+        entry["local_file"] = os.path.join(directory, filename)
+        if os.path.getsize(entry["local_file"]) != entry["size"]:
+            raise ValueError(f"custom package size mismatch: {filename}")
+        upstream[name] = entry
+
+
 def strip_constraint(token):
     return re.split(r"[=<>~]", token, maxsplit=1)[0]
 
@@ -193,11 +213,14 @@ def main():
     parser.add_argument("--date", default=datetime.date.today().isoformat())
     parser.add_argument("--keep", type=int, default=4, help="snapshots to keep per release")
     parser.add_argument("--mirror", default=UPSTREAM)
+    parser.add_argument("--local-repo", help="directory containing signed custom APKs and APKINDEX.tar.gz")
     parser.add_argument("--force", action="store_true", help="snapshot even if nothing changed")
     args = parser.parse_args()
 
     release_dir = os.path.join(args.site, args.release)
     upstream = load_upstream(args.mirror, args.release, args.arch)
+    if args.local_repo:
+        load_local(args.local_repo, args.arch, upstream)
     selected, missing = resolve(read_seeds(args.seeds), upstream)
     if missing:
         sys.exit(f"unresolved dependencies: {', '.join(sorted(set(missing)))}")
@@ -227,7 +250,9 @@ def main():
                            for d in reversed(previous)
                            if os.path.isfile(os.path.join(release_dir, d, repo, args.arch, filename))),
                           None)
-            if reused and os.path.abspath(reused) != os.path.abspath(dest):
+            if "local_file" in entry:
+                shutil.copyfile(entry["local_file"], dest)
+            elif reused and os.path.abspath(reused) != os.path.abspath(dest):
                 shutil.copyfile(reused, dest)
             elif not os.path.isfile(dest):
                 with open(dest, "wb") as f:
