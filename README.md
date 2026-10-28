@@ -202,6 +202,9 @@ python3 -m unittest discover -s tests -v
 tools/test-tinytex.sh out/custom/aarch64 test-key.rsa.pub
 ```
 
-This validates native ARM64 Linux execution. VirtualShell's emulated Linux
-runtime still needs a separate on-device check; native container success does
-not establish emulator compatibility.
+pdfLaTeX, XeLaTeX and LuaLaTeX were also checked through VirtualShell's local
+ARM64 emulator with a one-page document. This requires VirtualShell's
+`fstatat(..., AT_EMPTY_PATH)` fix: older app builds fail in glibc's loader with
+“cannot stat shared object: Error 20”. Update the app as well as its snapshot
+before using this package. The app's `APK_SNAPSHOT` should be `2026-10-28` or
+later. The native container tests remain part of each snapshot workflow.
