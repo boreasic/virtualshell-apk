@@ -68,14 +68,19 @@ jobs:
           cp keys/*.rsa.pub site/keys/
           touch site/.nojekyll
 
+      # Refresh latest even when the package set is unchanged and snapshot.py
+      # does not create a new dated directory.
+      - name: Update the rolling repository
+        run: python3 tools/publish_latest.py --site site --release v3.21
+
       - name: Publish
-        if: steps.build.outputs.snapshot != ''
         run: |
           cd site
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit --quiet -m "Snapshot ${{ steps.build.outputs.snapshot }}"
+          git diff --cached --quiet && exit 0
+          git commit --quiet -m "Publish snapshot repositories and latest"
           git push --quiet origin pages
 
       - name: Remove the signing key

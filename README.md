@@ -33,6 +33,44 @@ v3.21/<date>/{main,community}/aarch64/APKINDEX.tar.gz
 v3.21/<date>/{main,community}/aarch64/*.apk
 ```
 
+## Following the latest packages
+
+Use these stable repositories to follow the newest published snapshot:
+
+```
+https://boreasic.github.io/virtualshell-apk/v3.21/latest/main
+https://boreasic.github.io/virtualshell-apk/v3.21/latest/community
+```
+
+On an existing VirtualShell installation, add them in a separate APK repository
+file. Older app builds rewrite `/etc/apk/repositories` at startup, but leave
+`repositories.d` alone. No iPhone app update is needed:
+
+```sh
+mkdir -p /etc/apk/repositories.d
+printf '%s\n' \
+  https://boreasic.github.io/virtualshell-apk/v3.21/latest/main \
+  https://boreasic.github.io/virtualshell-apk/v3.21/latest/community \
+  > /etc/apk/repositories.d/virtualshell-latest.list
+apk update
+```
+
+This assumes the VirtualShell signing key is already installed, as it is in
+existing managed roots. The dated repository may still appear in `apk update`
+output; the added untagged `latest` repositories make newer package versions
+available too. `apk update` refreshes indexes; `apk upgrade` upgrades installed
+packages. Each snapshot workflow refreshes `latest`, including runs with no
+new dated snapshot. `v3.21/latest/snapshot.txt` records the date currently served.
+This follows published Alpine **v3.21** snapshots, not Alpine edge or every
+upstream update immediately. Run the workflow to publish new packages sooner
+than its monthly schedule.
+
+The latest endpoint contains regular copies of the signed indexes and APKs;
+GitHub Pages redirects or symlinks are not involved. Dated snapshot contents
+remain unchanged. After a repository refresh, run `apk update` again if a
+previously cached index references a version no longer available under latest.
+An app update may still be necessary for emulator compatibility fixes.
+
 ## Using a snapshot
 
 Install the public key as `/etc/apk/keys/<key>.rsa.pub` and use:
