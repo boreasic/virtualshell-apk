@@ -23,7 +23,7 @@ community py3-pip-zsh-completion 24.3.1-r0
 community ripgrep 14.1.1-r0
 community ripgrep-bash-completion 14.1.1-r0
 community ripgrep-zsh-completion 14.1.1-r0
-community tinytex 2026.10-r1
+community tinytex 2026.10-r2
 community tree-sitter 0.22.2-r1
 community unibilium 2.1.1-r0
 main acl-libs 2.3.2-r1
