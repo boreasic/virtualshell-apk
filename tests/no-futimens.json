@@ -1,0 +1,19 @@
+{
+  "defaultAction": "SCMP_ACT_ALLOW",
+  "syscalls": [
+    {
+      "names": [
+        "utimensat"
+      ],
+      "action": "SCMP_ACT_ERRNO",
+      "errnoRet": 20,
+      "args": [
+        {
+          "index": 1,
+          "value": 0,
+          "op": "SCMP_CMP_EQ"
+        }
+      ]
+    }
+  ]
+}

@@ -3,7 +3,9 @@
 set -eu
 repo=$1
 public_key=$2
-container=$(docker create --platform linux/arm64 alpine:3.21 sh /test-tinytex.sh)
+# Reproduce old VirtualShell's utimensat(fd, NULL, ...) -> ENOTDIR bug.
+container=$(docker create --platform linux/arm64 \
+    --security-opt seccomp=tests/no-futimens.json alpine:3.21 sh /test-tinytex.sh)
 trap 'docker rm -f "$container" >/dev/null' EXIT
 trap 'exit 1' HUP INT TERM
 docker cp "$repo" "$container:/repo"

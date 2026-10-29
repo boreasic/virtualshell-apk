@@ -1,5 +1,16 @@
 #!/bin/sh
 set -eu
+# Confirm the injected kernel fault reproduces the user's GNU tar error.
+apk add --no-cache tar
+mkdir -p /tmp/timestamp-probe/input /tmp/timestamp-probe/output
+printf 'probe\n' > /tmp/timestamp-probe/input/file
+tar -cf /tmp/timestamp-probe/archive.tar -C /tmp/timestamp-probe/input .
+if tar -xf /tmp/timestamp-probe/archive.tar -C /tmp/timestamp-probe/output 2>/tmp/timestamp-probe/error.log; then
+    echo 'Expected the old-kernel timestamp failure, but tar succeeded' >&2
+    exit 1
+fi
+grep -q 'Cannot utime: Not a directory' /tmp/timestamp-probe/error.log
+echo 'Confirmed old-kernel Cannot utime failure before testing the installer.'
 # No --allow-untrusted: this tests APK signature verification as well.
 apk add --no-cache /repo/tinytex-*.apk
 [ "$(cat /opt/tinytex/.virtualshell-version)" = 2026.10 ]
@@ -28,7 +39,11 @@ test "$(patchelf --print-interpreter /opt/tinytex/bin/aarch64-linux/pdftex)" = /
 pdflatex -interaction=nonstopmode -halt-on-error hello.tex
 # Package removal preserves downloaded data; reinstallation reuses it.
 apk del tinytex
-! command -v pdflatex
+hash -r
+if command -v pdflatex; then
+    echo 'TinyTeX command wrapper survived package removal' >&2
+    exit 1
+fi
 test -f /opt/tinytex/preserve-test
 apk add --no-cache /repo/tinytex-*.apk
 test -f /opt/tinytex/preserve-test

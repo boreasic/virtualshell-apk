@@ -246,3 +246,20 @@ ARM64 emulator with a one-page document. This requires VirtualShell's
 “cannot stat shared object: Error 20”. Update the app as well as its snapshot
 before using this package. The app's `APK_SNAPSHOT` should be `2026-10-28` or
 later. The native container tests remain part of each snapshot workflow.
+
+
+### Retrying an installer timestamp error
+
+Installer `2026.10-r1` extracts with `tar --touch` and copies runtime files
+without preserving timestamps. This avoids older VirtualShell's
+`utimensat(fd, NULL, ...)` bug. With the rolling repository configured, run:
+
+```sh
+apk update
+apk add --upgrade tinytex
+```
+
+The installer regression test denies that syscall form with `ENOTDIR` using
+seccomp, then runs the complete installation and PDF tests. This workaround
+addresses extraction only: the older app's separate `fstatat(AT_EMPTY_PATH)`
+loader bug still requires the app compatibility fix described above.

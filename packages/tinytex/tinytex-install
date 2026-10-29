@@ -46,6 +46,8 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 1' HUP INT TERM
 mkdir "$stage/downloads" "$stage/runtime"
+# Older VirtualShell builds cannot restore timestamps through an open file
+# descriptor. TeX needs the files and executable modes, not archive mtimes.
 while read -r checksum name url; do
 	case "$checksum" in ''|'#'*) continue ;; esac
 	echo "Downloading $name..."
@@ -57,17 +59,17 @@ while read -r checksum name url; do
 			member=$(ar t "$stage/downloads/$name" | sed -n '/^data\.tar\./p')
 			[ -n "$member" ]
 			ar p "$stage/downloads/$name" "$member" > "$stage/data.tar"
-			tar -xf "$stage/data.tar" -C "$stage/runtime"
+			tar --touch -xf "$stage/data.tar" -C "$stage/runtime"
 			;;
-		*.tar.xz) tar -xJf "$stage/downloads/$name" -C "$stage" ;;
+		*.tar.xz) tar --touch -xJf "$stage/downloads/$name" -C "$stage" ;;
 		*) echo "Unknown archive: $name" >&2; exit 1 ;;
 	esac
 done < "$manifest"
 mkdir -p "$stage/.TinyTeX/runtime/lib" "$stage/.TinyTeX/runtime/licenses"
-cp -a "$stage/runtime/lib/aarch64-linux-gnu/"* "$stage/.TinyTeX/runtime/lib/"
-cp -a "$stage/runtime/usr/lib/aarch64-linux-gnu/"* "$stage/.TinyTeX/runtime/lib/"
-cp -a "$stage/runtime/usr/share/doc/"* "$stage/.TinyTeX/runtime/licenses/"
-touch "$stage/.TinyTeX/.virtualshell-installing"
+cp -RP "$stage/runtime/lib/aarch64-linux-gnu/"* "$stage/.TinyTeX/runtime/lib/"
+cp -RP "$stage/runtime/usr/lib/aarch64-linux-gnu/"* "$stage/.TinyTeX/runtime/lib/"
+cp -RP "$stage/runtime/usr/share/doc/"* "$stage/.TinyTeX/runtime/licenses/"
+: > "$stage/.TinyTeX/.virtualshell-installing"
 mv "$stage/.TinyTeX" "$root"
 repair
 "$root/bin/aarch64-linux/pdflatex" --version >/dev/null
