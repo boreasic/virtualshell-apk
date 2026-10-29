@@ -263,3 +263,10 @@ The installer regression test denies that syscall form with `ENOTDIR` using
 seccomp, then runs the complete installation and PDF tests. This workaround
 addresses extraction only: the older app's separate `fstatat(AT_EMPTY_PATH)`
 loader bug still requires the app compatibility fix described above.
+
+Installer `2026.10-r2` also decompresses archives into a temporary tar file
+before extraction. This avoids the tar/xz subprocess pipe that stalled during
+installation on an older iPhone app build. Decompression and extraction are
+reported separately; extraction can take several minutes on the phone. Keep
+VirtualShell in the foreground until the installer finishes. The temporary
+uncompressed archive is removed after extraction and on installer failure.

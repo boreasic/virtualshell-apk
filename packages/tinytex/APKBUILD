@@ -1,7 +1,7 @@
 # Maintainer: Marcos Romero Lamas <marromlam@gmail.com>
 pkgname=tinytex
 pkgver=2026.10
-pkgrel=1
+pkgrel=2
 pkgdesc="TinyTeX ARM64 installer with a private glibc runtime"
 url="https://yihui.org/tinytex/"
 arch="aarch64"
@@ -23,7 +23,7 @@ package() {
 }
 
 sha512sums="
-d2d695ad5b9fd254102cded0aefdea9114ef359c96ac22b93cd27e7713e868195f87c8bd989dc47bea4608442cb9c2bba80db72e87f7fe94d8873fc36150a296  tinytex-install
+410a1e50b2ae50000ed39e9715c70237788d3b0862c36f52a066d21d03544b3682adaf7c5ee860179851803995820546a4b03cd9511aa4d7ed0d218678aef0bd  tinytex-install
 27c91798a991598d74af5a31d70c2fca158f260742959e8e9eb1e3c7bc4feb623c9f54edade8aa87ae2e43b21d3c19963d81b3841be77464eeef3562603e5f16  tinytex-command
 e8295947a2e15e66e7db61b2629b1963f5a7aa1e4aa475fca6011162a0c7a8466067b43913fa3a5d883458b2229e7fd58f86d43f76a2f75bb7be7b24b4b75775  downloads.txt
 5256405e664b458a3a07a81eb5c7bba5b3950e4503e8d54f55dfab4c6380ee7170ea2a54b7c7040e74911373f7a80cde030c6e180841fdfdaf95f6779751da37  LICENSE

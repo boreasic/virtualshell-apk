@@ -59,9 +59,23 @@ while read -r checksum name url; do
 			member=$(ar t "$stage/downloads/$name" | sed -n '/^data\.tar\./p')
 			[ -n "$member" ]
 			ar p "$stage/downloads/$name" "$member" > "$stage/data.tar"
-			tar --touch -xf "$stage/data.tar" -C "$stage/runtime"
+			case "$member" in
+				*.xz) xz -dc "$stage/data.tar" > "$stage/unpacked.tar" ;;
+				*.gz) gzip -dc "$stage/data.tar" > "$stage/unpacked.tar" ;;
+				*.tar) mv "$stage/data.tar" "$stage/unpacked.tar" ;;
+				*) echo "Unsupported archive member: $member" >&2; exit 1 ;;
+			esac
+			tar --touch -xf "$stage/unpacked.tar" -C "$stage/runtime"
+			rm -f "$stage/data.tar" "$stage/unpacked.tar"
 			;;
-		*.tar.xz) tar --touch -xJf "$stage/downloads/$name" -C "$stage" ;;
+		*.tar.xz)
+			# Avoid the tar/xz subprocess pipe on older VirtualShell builds.
+			echo "Decompressing $name..."
+			xz -dc "$stage/downloads/$name" > "$stage/unpacked.tar"
+			echo "Extracting $name..."
+			tar --touch -xf "$stage/unpacked.tar" -C "$stage"
+			rm "$stage/unpacked.tar"
+			;;
 		*) echo "Unknown archive: $name" >&2; exit 1 ;;
 	esac
 done < "$manifest"
