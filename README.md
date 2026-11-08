@@ -93,8 +93,10 @@ The rootfs builder lives here alongside the package snapshots and public
 keys it consumes. The [Dockerfile](Dockerfile) builds an ARM64 default
 filesystem: Alpine's checksum-pinned minirootfs plus `bash` (root's login shell; `/bin/sh` stays
 BusyBox), installed with apk from a pinned snapshot, and the files in
-`rootfs/overlay/` (`clc`, `/etc/profile.d` and `/etc/bash` defaults, bash
-startup files). `rootfs/build.sh` runs `apk update` and `apk add bash`
+`rootfs/overlay/` (`clc`, the fallback `/etc/motd` and live guest report,
+`/etc/profile.d` and `/etc/bash` defaults, and bash startup files). The app
+invokes the report at shell startup; a user-edited `/etc/motd` takes precedence.
+`rootfs/build.sh` runs `apk update` and `apk add bash`
 against the guest filesystem and verifies that Bash can execute. Builder
 tools and package caches are excluded from the archive.
 

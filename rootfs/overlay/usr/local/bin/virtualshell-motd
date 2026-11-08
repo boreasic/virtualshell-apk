@@ -1,0 +1,73 @@
+#!/bin/sh
+# Print a compact report from the Linux guest. A user-edited /etc/motd wins.
+
+fallback=/etc/motd
+if [ -f "$fallback" ]; then
+    digest=$(sha256sum "$fallback" 2>/dev/null) || digest=
+    case "$digest" in
+        "ff044e9be5daa2eee2d3d10a4da72e5477e4c24c16f1792de2c91dae844c0e30 "*|"4157d979cb4c537cfc655103ac042cc213bb5975b56d8b250cb9ef8e7c8f14d3 "*|"1f76a3962ff42a682807048570a62193a84b9ba77e3f492746d626545f7b175d "*|"1748a8240e81b13f134ee20c808eee8bcf627345f39b7e654a4631fa4444dbdc "*|"9bb9f931a6b8b35c16eb431e527a8314e66e14628ad6fd5df880a47c68fd1471 "*) ;;
+        *) cat "$fallback"; exit $? ;;
+    esac
+fi
+
+# Terminal width is fixed at process start by the app's measured Ghostty grid.
+# The native CLI has no PTY, so its report uses the 42-column fallback.
+size=$(stty size 2>/dev/null) || size=
+set -- $size
+columns=${2:-${VS_MOTD_COLUMNS:-42}}
+case "$columns" in
+    ''|*[!0-9]*) columns=42 ;;
+esac
+[ "$columns" -gt 60 ] && columns=60
+
+os=$(awk -F= '$1 == "PRETTY_NAME" { gsub(/"/, "", $2); print $2; exit }' /etc/os-release 2>/dev/null)
+[ -n "$os" ] || os='Linux guest'
+rootfs_snapshot=$(head -n 1 /etc/virtualshell-rootfs 2>/dev/null) || rootfs_snapshot='Unknown'
+[ -n "$rootfs_snapshot" ] || rootfs_snapshot='Unknown'
+kernel=$(uname -r 2>/dev/null) || kernel='Unavailable'
+
+# Small floating windows cannot fit the two-column box. Keep the same four
+# facts visible without wrapping their lines.
+if [ "$columns" -lt 28 ]; then
+    printf '%.*s\n' "$columns" 'VIRTUAL SHELL'
+    printf '%.*s\n' "$columns" "ROOTFS $rootfs_snapshot"
+    printf '%.*s\n' "$columns" "OS $os"
+    printf '%.*s\n' "$columns" "KERNEL $kernel"
+    exit 0
+fi
+
+width=$columns
+inner=$((width - 2))
+label_width=12
+[ "$width" -lt 38 ] && label_width=8
+value_width=$((width - label_width - 7))
+
+repeat() {
+    char=$1
+    count=$2
+    result=
+    while [ "$count" -gt 0 ]; do
+        result=$result$char
+        count=$((count - 1))
+    done
+    printf '%s' "$result"
+}
+center() {
+    value=$(printf '%.*s' "$inner" "$1")
+    spaces=$((inner - ${#value}))
+    left=$((spaces / 2))
+    right=$((spaces - left))
+    printf '│%*s%s%*s│\n' "$left" '' "$value" "$right" ''
+}
+row() {
+    printf "│ %-${label_width}.${label_width}s │ %-${value_width}.${value_width}s │\n" "$1" "$2"
+}
+
+printf '┌'; repeat '┬' "$inner"; printf '┐\n'
+printf '├'; repeat '┴' "$inner"; printf '┤\n'
+center 'VIRTUAL SHELL'
+center "ROOTFS SNAPSHOT $rootfs_snapshot"
+printf '├'; repeat '─' "$((label_width + 2))"; printf '┬'; repeat '─' "$((value_width + 2))"; printf '┤\n'
+row 'OS' "$os"
+row 'KERNEL' "$kernel"
+printf '└'; repeat '─' "$((label_width + 2))"; printf '┴'; repeat '─' "$((value_width + 2))"; printf '┘\n'

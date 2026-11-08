@@ -71,6 +71,7 @@ cp -R "$here/overlay/." "$rootfs/"
 # macOS archive metadata, if the overlay came through a Mac's tar.
 find "$rootfs" -name '._*' -exec rm -f {} +
 chmod 0755 "$rootfs/usr/local/bin/clc"
+chmod 0755 "$rootfs/usr/local/bin/virtualshell-motd"
 for f in .bash_profile .bashrc; do
     [ -e "$rootfs/root/$f" ] || cp "$rootfs/etc/skel/$f" "$rootfs/root/$f"
 done
