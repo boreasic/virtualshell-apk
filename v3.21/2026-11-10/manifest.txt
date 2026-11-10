@@ -1,5 +1,5 @@
 community claude-code 2.1.311-r0
-community codex 0.167.0-r0
+community codex 0.167.0-r1
 community fd 10.2.0-r0
 community fd-bash-completion 10.2.0-r0
 community fd-zsh-completion 10.2.0-r0
@@ -83,6 +83,7 @@ main libmagic 5.46-r2
 main libncursesw 6.5_p20241006-r3
 main libpanelw 6.5_p20241006-r3
 main libpng 1.6.59-r0
+main libproc2 4.0.4-r2
 main libpsl 0.21.5-r3
 main libssl3 3.3.7-r2
 main libstdc++ 14.2.0-r4
@@ -107,6 +108,7 @@ main pcre2 10.43-r1
 main perl 5.40.4-r0
 main perl-error 0.17029-r2
 main perl-git 2.47.3-r0
+main procps-ng 4.0.4-r2
 main py3-packaging 24.2-r0
 main py3-packaging-pyc 24.2-r0
 main py3-parsing 3.1.4-r0
