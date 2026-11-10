@@ -11,6 +11,9 @@ community fzf-zsh-plugin 0.56.3-r5
 community git-lfs 3.6.0-r5
 community git-lfs-bash-completion 3.6.0-r5
 community git-lfs-zsh-completion 3.6.0-r5
+community github-cli 2.63.0-r5
+community github-cli-bash-completion 2.63.0-r5
+community github-cli-zsh-completion 2.63.0-r5
 community libluv 1.45.0.0-r0
 community libvterm 0.3.3-r0
 community lua5.1-lpeg 1.1.0-r0
