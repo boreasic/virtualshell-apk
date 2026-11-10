@@ -13,7 +13,7 @@ codex-install
 claude-code-install
 # --version alone misses incomplete packages. Exercise real daemon lifecycle
 # without credentials or a model request, and leave no background processes.
-CODEX_HOME=$(mktemp -d /tmp/codex-daemon.XXXXXX)
+CODEX_HOME=$(mktemp -d /root/codex-daemon.XXXXXX)
 export CODEX_HOME
 trap 'codex app-server daemon stop >/dev/null 2>&1 || true; rm -rf "$CODEX_HOME"' EXIT
 codex app-server daemon start

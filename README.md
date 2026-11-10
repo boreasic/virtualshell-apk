@@ -222,7 +222,8 @@ downloaded binary too.
 
 Codex installer `0.167.0-r1` downloads the complete upstream package, including
 the package manifest and helper executables required by its shared background
-server. It repairs the earlier executable-only installation at the same Codex
+server, and installs `procps-ng` for the daemon's process identity checks.
+It repairs the earlier executable-only installation at the same Codex
 version. With the rolling `latest` repositories configured, update and start it:
 
 ```sh
