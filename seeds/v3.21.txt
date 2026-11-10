@@ -33,6 +33,7 @@ neovim
 # Tier 2: git and scripting
 git
 git-lfs
+github-cli
 python3
 py3-pip
 perl

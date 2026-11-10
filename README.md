@@ -183,6 +183,24 @@ apk reports the indexes as `UNTRUSTED signature` and ignores them.
 - Mirrored packages keep their own licenses. The site serves Alpine's
   unmodified packages; their sources are in Alpine's aports repository.
 
+## GitHub CLI
+
+New snapshots include Alpine's signed `github-cli` package, which installs
+the `gh` command and its Git dependency:
+
+```sh
+apk update
+apk add github-cli
+gh --version
+gh auth login --hostname github.com --git-protocol https --web
+```
+
+Open the displayed URL in your browser and enter the device code to sign in.
+On an existing VirtualShell installation, first configure the rolling
+`latest` repositories as described in [Following the latest packages](#following-the-latest-packages).
+Older dated snapshots are unchanged. GitHub CLI is mirrored directly from
+Alpine v3.21; APK manages installation, upgrades, and removal (`apk del github-cli`).
+
 ## Codex and Claude Code
 
 New snapshots include signed `codex` and `claude-code` installer packages:
