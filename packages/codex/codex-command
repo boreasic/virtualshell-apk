@@ -1,0 +1,7 @@
+#!/bin/sh
+binary=/opt/codex/0.167.0/codex
+if [ ! -x "$binary" ]; then
+	echo 'Codex is not installed. Run codex-install as root to retry the download.' >&2
+	exit 1
+fi
+exec "$binary" "$@"

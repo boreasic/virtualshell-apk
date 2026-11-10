@@ -1,0 +1,33 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Downloads remain upstream; the small APK contains only this installer.
+set -eu
+version=2.1.311
+sha256=172150e3f9ea07e8e2e2e29862d7d9a25f5c234d8e909e4063df237665bf09b9
+url=https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/$version/linux-arm64-musl/claude
+root=/opt/claude-code
+binary=$root/$version/claude
+
+[ "$#" -eq 0 ] || { echo 'Usage: claude-code-install' >&2; exit 2; }
+[ "$(id -u)" = 0 ] || { echo 'Run claude-code-install as root.' >&2; exit 1; }
+[ "$(uname -m)" = aarch64 ] || { echo 'Claude Code requires aarch64.' >&2; exit 1; }
+if [ ! -x "$binary" ]; then
+	mkdir -p "$root"
+	stage=$(mktemp -d "$root/.install.XXXXXX")
+	trap 'rm -rf "$stage"' EXIT
+	trap 'exit 1' HUP INT TERM
+	echo "Downloading Claude Code $version..."
+	mkdir "$stage/$version"
+	curl --fail --location --retry 3 --connect-timeout 30 --max-time 1800 \
+		"$url" -o "$stage/$version/claude"
+	printf '%s  %s\n' "$sha256" "$stage/$version/claude" | sha256sum -c -
+	chmod 755 "$stage/$version/claude"
+	DISABLE_AUTOUPDATER=1 "$stage/$version/claude" --version >/dev/null
+	rm -rf "${root:?}/$version"
+	mv "$stage/$version" "$root/$version"
+fi
+# Remove binaries from earlier package versions.
+for old in "$root"/*; do
+	[ "$old" = "$root/$version" ] || rm -rf "$old"
+done
+echo "Claude Code $version is ready: run claude."

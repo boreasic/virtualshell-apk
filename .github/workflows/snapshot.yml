@@ -56,6 +56,10 @@ jobs:
         run: |
           tools/test-tinytex.sh custom/aarch64 keys/"${{ vars.APK_KEY_NAME }}".rsa.pub
 
+      - name: Test Codex and Claude Code installation
+        run: |
+          tools/test-agents.sh custom/aarch64 keys/"${{ vars.APK_KEY_NAME }}".rsa.pub
+
       - name: Build the snapshot
         id: build
         run: |

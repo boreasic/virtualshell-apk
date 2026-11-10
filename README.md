@@ -183,6 +183,32 @@ apk reports the indexes as `UNTRUSTED signature` and ignores them.
 - Mirrored packages keep their own licenses. The site serves Alpine's
   unmodified packages; their sources are in Alpine's aports repository.
 
+## Codex and Claude Code
+
+New snapshots include signed `codex` and `claude-code` installer packages:
+
+```sh
+apk update
+apk add codex claude-code
+codex
+claude
+```
+
+Like TinyTeX, each small APK downloads the official upstream aarch64 musl
+binary during installation (Codex `0.167.0`, about 115 MB; Claude Code
+`2.1.311`, about 285 MB) and verifies a pinned SHA-256 before installing it
+under `/opt/codex` or `/opt/claude-code`. Upstream binaries are not
+redistributed here and keep their own licenses. If the download fails, retry
+with `codex-install` or `claude-code-install`. `apk del` removes the
+downloaded binary too.
+
+APK manages these versions: the `claude` wrapper sets `DISABLE_AUTOUPDATER=1`
+and uses Alpine's `ripgrep` (`USE_BUILTIN_RIPGREP=0`). To update, bump
+`pkgver`, the URL and the checksum in `packages/<name>/<name>-install`, the
+version in the command wrapper, and the APKBUILD `sha512sums`, then publish a
+snapshot. Existing installations need a newer snapshot or the rolling
+`latest` repository to see these packages.
+
 ## TinyTeX
 
 New snapshots include a signed `tinytex` installer package:
