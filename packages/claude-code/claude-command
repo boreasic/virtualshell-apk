@@ -1,0 +1,10 @@
+#!/bin/sh
+binary=/opt/claude-code/2.1.311/claude
+if [ ! -x "$binary" ]; then
+	echo 'Claude Code is not installed. Run claude-code-install as root to retry the download.' >&2
+	exit 1
+fi
+# APK manages this binary: use Alpine's ripgrep and leave updates to apk.
+export USE_BUILTIN_RIPGREP="${USE_BUILTIN_RIPGREP:-0}"
+export DISABLE_AUTOUPDATER=1
+exec "$binary" "$@"

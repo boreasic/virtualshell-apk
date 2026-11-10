@@ -1,0 +1,24 @@
+# Maintainer: Marcos Romero Lamas <marromlam@gmail.com>
+pkgname=codex
+pkgver=0.167.0
+pkgrel=0
+pkgdesc="OpenAI Codex CLI installer (downloads the upstream aarch64 musl binary)"
+url="https://github.com/openai/codex"
+arch="aarch64"
+license="MIT"
+depends="ca-certificates curl gzip tar git ripgrep"
+options="!check"
+install="$pkgname.post-install $pkgname.post-upgrade $pkgname.pre-deinstall"
+source="codex-install codex-command LICENSE"
+
+package() {
+	install -Dm755 "$srcdir/codex-install" "$pkgdir/usr/sbin/codex-install"
+	install -Dm755 "$srcdir/codex-command" "$pkgdir/usr/bin/codex"
+	install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/codex/LICENSE"
+}
+
+sha512sums="
+de16d4a56ba118539a6d5c5b3d35e9051087b23f665ec3698871334f196853a18b1b08145cbe357236333f9b2032cf70329cdd637934800a5c6c7cefabbbee89  codex-install
+9a2b52e069b5e8794f94f8065509ab5d3547aee947611943397254af1d37014532a83f36c0a55441e3b7434807b4ddf5684774b17f1cddc004e90a854a27a7f4  codex-command
+5256405e664b458a3a07a81eb5c7bba5b3950e4503e8d54f55dfab4c6380ee7170ea2a54b7c7040e74911373f7a80cde030c6e180841fdfdaf95f6779751da37  LICENSE
+"

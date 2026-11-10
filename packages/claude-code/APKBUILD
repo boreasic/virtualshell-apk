@@ -1,0 +1,24 @@
+# Maintainer: Marcos Romero Lamas <marromlam@gmail.com>
+pkgname=claude-code
+pkgver=2.1.311
+pkgrel=0
+pkgdesc="Claude Code installer (downloads the upstream aarch64 musl binary)"
+url="https://github.com/anthropics/claude-code"
+arch="aarch64"
+license="MIT"
+depends="ca-certificates curl libgcc libstdc++ ripgrep git"
+options="!check"
+install="$pkgname.post-install $pkgname.post-upgrade $pkgname.pre-deinstall"
+source="claude-code-install claude-command LICENSE"
+
+package() {
+	install -Dm755 "$srcdir/claude-code-install" "$pkgdir/usr/sbin/claude-code-install"
+	install -Dm755 "$srcdir/claude-command" "$pkgdir/usr/bin/claude"
+	install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/claude-code/LICENSE"
+}
+
+sha512sums="
+0f7689ebd7820c7c60161703649d9f899b26fb190fd3333bf98831cb66f14bddc8f65de32bc720ec82cb95d80bfef95258b7917bcb9ad30ecd0de36cacffc621  claude-code-install
+25ca43a1a1580813416e35870334fc90841a102d8c61611c4b33d8542b0e5bb2a63ea931db043ae4925075f4f76695f6907d3399ea0ccad98f5c08f615c7bbbc  claude-command
+5256405e664b458a3a07a81eb5c7bba5b3950e4503e8d54f55dfab4c6380ee7170ea2a54b7c7040e74911373f7a80cde030c6e180841fdfdaf95f6779751da37  LICENSE
+"

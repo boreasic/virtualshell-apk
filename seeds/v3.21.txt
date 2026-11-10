@@ -47,5 +47,7 @@ fzf
 libgcc
 libstdc++
 
-# Custom installer (built locally before resolving the snapshot)
+# Custom installers (built locally before resolving the snapshot)
 tinytex
+codex
+claude-code

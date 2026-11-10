@@ -1,0 +1,3 @@
+#!/bin/sh
+# The downloaded binary is not owned by APK; remove it with the package.
+rm -rf /opt/claude-code
