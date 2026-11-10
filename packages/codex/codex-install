@@ -3,15 +3,22 @@
 # Downloads remain upstream; the small APK contains only this installer.
 set -eu
 version=0.167.0
-sha256=843489acb4d4b1079745c36b03c5963b887b83155af208fd53584e33ee8eb281
-url=https://github.com/openai/codex/releases/download/rust-v$version/codex-aarch64-unknown-linux-musl.tar.gz
+sha256=0de261ecf1e7f3028a7952f03fca2093f749277d38590b78bb32f8567756bbb7
+url=https://github.com/openai/codex/releases/download/rust-v$version/codex-package-aarch64-unknown-linux-musl.tar.gz
 root=/opt/codex
-binary=$root/$version/codex
+package=$root/$version
 
 [ "$#" -eq 0 ] || { echo 'Usage: codex-install' >&2; exit 2; }
 [ "$(id -u)" = 0 ] || { echo 'Run codex-install as root.' >&2; exit 1; }
 [ "$(uname -m)" = aarch64 ] || { echo 'Codex requires aarch64.' >&2; exit 1; }
-if [ ! -x "$binary" ]; then
+# A single executable supports --version but cannot start the shared daemon.
+# Check the full layout so upgrading the old same-version installer repairs it.
+complete=true
+[ -f "$package/codex-package.json" ] || complete=false
+for executable in bin/codex bin/codex-code-mode-host bin/codex-exec-server codex-path/rg codex-resources/bwrap; do
+	[ -x "$package/$executable" ] || complete=false
+done
+if [ "$complete" = false ]; then
 	mkdir -p "$root"
 	stage=$(mktemp -d "$root/.install.XXXXXX")
 	trap 'rm -rf "$stage"' EXIT
@@ -27,9 +34,11 @@ if [ ! -x "$binary" ]; then
 	mkdir "$stage/$version"
 	tar --touch --no-same-owner -xf "$stage/codex.tar" -C "$stage/$version"
 	rm "$stage/codex.tar"
-	mv "$stage/$version/codex-aarch64-unknown-linux-musl" "$stage/$version/codex"
-	chmod 755 "$stage/$version/codex"
-	"$stage/$version/codex" --version >/dev/null
+	[ -f "$stage/$version/codex-package.json" ]
+	for executable in bin/codex bin/codex-code-mode-host bin/codex-exec-server codex-path/rg codex-resources/bwrap; do
+		chmod 755 "$stage/$version/$executable"
+	done
+	"$stage/$version/bin/codex" --version >/dev/null
 	rm -rf "${root:?}/$version"
 	mv "$stage/$version" "$root/$version"
 fi

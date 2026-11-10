@@ -213,12 +213,30 @@ claude
 ```
 
 Like TinyTeX, each small APK downloads the official upstream aarch64 musl
-binary during installation (Codex `0.167.0`, about 115 MB; Claude Code
+package during installation (Codex `0.167.0`, about 188 MB; Claude Code
 `2.1.311`, about 285 MB) and verifies a pinned SHA-256 before installing it
 under `/opt/codex` or `/opt/claude-code`. Upstream binaries are not
 redistributed here and keep their own licenses. If the download fails, retry
 with `codex-install` or `claude-code-install`. `apk del` removes the
 downloaded binary too.
+
+Codex installer `0.167.0-r1` downloads the complete upstream package, including
+the package manifest and helper executables required by its shared background
+server. It repairs the earlier executable-only installation at the same Codex
+version. With the rolling `latest` repositories configured, update and start it:
+
+```sh
+apk update
+apk add --upgrade codex
+codex app-server daemon start
+codex
+```
+
+Use `codex app-server daemon version` to check the running server and
+`codex app-server daemon stop` to stop it. `codex --no-daemon` remains available
+for foreground use. iOS may suspend all guest processes, including the daemon,
+when VirtualShell is in the background; this does not provide continuous
+execution while the iPhone app is suspended.
 
 APK manages these versions: the `claude` wrapper sets `DISABLE_AUTOUPDATER=1`
 and uses Alpine's `ripgrep` (`USE_BUILTIN_RIPGREP=0`). To update, bump
